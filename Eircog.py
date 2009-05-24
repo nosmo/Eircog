@@ -223,6 +223,7 @@ def main():
         numkeys = 4
     if sys.platform == "linux" and not(optparse.options.interface):
         sys.stderr.write("Interface not specified!\n")
+        sys.exit(1)
 
     if daemon:
         os.system("/usr/bin/clear")
