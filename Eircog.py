@@ -22,6 +22,7 @@ All credit for the key generation goes to Kevin Devine
 __author__ = "nosmo@netsoc.tcd.ie (nosmo)"
 
 intwords = ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine"]
+inttoword = lambda a: intwords[int(a)]
 hendrix = ["Although your world wonders me, ",
            "with your superior cackling hen,",
            "Your people I do not understand,",
@@ -55,8 +56,6 @@ def GetAPs(ssid=None):
                                              "framework/Versions/Current/Resources/airport "
                                              "-s") , shell = True, stdout = subprocess.PIPE)
                 output = scanproc.communicate()[0].split("\n")
-
-            #sys.exit(1)
         output.pop(len(output) - 1)
 
         print "Detected the following access points"
@@ -153,12 +152,11 @@ def SerialString(serial):
     
     serialno = str(serial)
     serialstr = ""
-    for number in serialno: # This is SUPPOSED to iterate over a string
-        # Silly pylint nerds
-        serialstr += intwords[int(number)]
+    for number in serialno:
+        serialstr += inttoword(number)
     return serialstr
 
-def DoAll():
+def DoAll(numkeys):
 
     access_points = GetAPs(optparse.options.ssidonly)
 
@@ -172,20 +170,29 @@ def DoAll():
 
         octalbits.append(octconv)
         serial = SerialNumber(octconv)
+        
+        keymass = ""
 
         if not(serial):
             continue
         else:
 
             serialstr = SerialString(serial)
-            shastr = sha.new(serialstr + hendrix[0])
-            shahex = shastr.hexdigest()
+            shahex = "" 
 
-            key = ""
-            for i in range(26):
-                key = key + shahex[i]
-
-            print "eircom%s %s : %s" % (ap[0], ap[1], key)    
+            length = 1
+            if numkeys == 4:
+                length = len(hendrix)
+            for i in range(length):
+                shastr = sha.new(serialstr + hendrix[i])
+                shahex += shastr.hexdigest()
+                
+            ind = 0
+            
+            print "eircom%s %s:" % (ap[0], ap[1])            
+            while (ind < numkeys*26):
+                print "\t\t%s" % shahex[ind:ind+26]
+                ind += 26
 
 def main():
     parser = optparse.OptionParser(usage="Usage: %name [-s|--ssidonly eircomstring] [-d]")
@@ -196,6 +203,8 @@ def main():
                                             " spaces!"))
     parser.add_option("-d", "--daemon", action="store_true", default=False,
                       dest="daemon", help="Run constantly")
+    parser.add_option("-4", action="store_true", default=False, dest="allkeys", 
+                      help="Generate all four keys instead of just one.")
 
     (optparse.options, optparse.args) = parser.parse_args()
 
@@ -204,16 +213,20 @@ def main():
         sys.platform = "ssidonly"
     elif optparse.options.daemon:
         daemon = True
+        
+    numkeys = 1
+    if optparse.options.allkeys:
+        numkeys = 4
 
     if daemon:
         os.system("/usr/bin/clear")
         while True:
             os.system("/usr/bin/clear")
-            DoAll()
+            DoAll(numkeys)
             time.sleep(SLEEPINTERVAL)
             
     else:
-        DoAll()
+        DoAll(numkeys)
 
 
 if __name__ == "__main__":
