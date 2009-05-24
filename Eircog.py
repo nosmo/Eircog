@@ -72,7 +72,7 @@ def GetAPs(ssid=None):
 
     elif sys.platform == "linux2":
 
-        scanproc = subprocess.Popen(("/sbin/iwlist ra0 scanning"),
+        scanproc = subprocess.Popen(("/sbin/iwlist %s scanning" % optparse.options.interface),
                                     shell = True, stdout = subprocess.PIPE)
         output = scanproc.communicate()[0].split("\n")
     
@@ -201,8 +201,11 @@ def main():
                      dest="ssidonly", help=("Specifies a manual SSID, no scanning "
                                             "is done (Don't forget double quotes for"
                                             " spaces!"))
+    parser.add_option("-i", "--interface", action="store", type="string",
+                     dest="interface", help="The interface to scan with.")
+                                            
     parser.add_option("-d", "--daemon", action="store_true", default=False,
-                      dest="daemon", help="Run constantly")
+                      dest="daemon", help="Run constantly.")
     parser.add_option("-4", action="store_true", default=False, dest="allkeys", 
                       help="Generate all four keys instead of just one.")
 
@@ -215,8 +218,11 @@ def main():
         daemon = True
         
     numkeys = 1
+    
     if optparse.options.allkeys:
         numkeys = 4
+    if sys.platform == "linux" and not(optparse.options.interface):
+        sys.stderr.write("Interface not specified!\n")
 
     if daemon:
         os.system("/usr/bin/clear")
