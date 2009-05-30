@@ -12,8 +12,6 @@ import time
 
 I have subdivided this code too much.
 
-Version 0.4
-
 Heavily based on http://h1.ripway.com/kevindevine/wep_key.html
 All credit for the key generation goes to Kevin Devine
 
@@ -37,7 +35,7 @@ def GetAPs(ssid=None):
      ssid: an optional supplied ssid for getting the key from the command line
 
     Returns:
-      results: a list of two entry lists containing the ocal for the access points
+      results: a list of two entry lists containing the octal for the access points
     """
 
     results = []
@@ -50,7 +48,8 @@ def GetAPs(ssid=None):
         output.pop(0)
 
         if len(output) == 0:
-            sys.stderr.write("No access points detected - This may be because there are no APs or because the airport tool returned too quickly!\n")
+            sys.stderr.write(("No access points detected - This may be because there "
+                              "are no APs or because the airport tool returned too quickly!\n"))
             while len(output) == 0:
                 scanproc = subprocess.Popen(("/System/Library/PrivateFrameworks/Apple80211."
                                              "framework/Versions/Current/Resources/airport "
@@ -157,6 +156,17 @@ def SerialString(serial):
     return serialstr
 
 def DoAll(numkeys):
+    """Do everything, really.
+    
+     Call all of the relevant functions in order to get the serial key, then
+    do the SHA-related hackery to get the actual key(s?).
+    
+    Args:
+      numkeys: the number of keys to generate - 1 or 4.
+      
+    Returns:
+      owt.
+    """
 
     access_points = GetAPs(optparse.options.ssidonly)
 
@@ -195,7 +205,8 @@ def DoAll(numkeys):
                 ind += 26
 
 def main():
-    parser = optparse.OptionParser(usage="Usage: %name [-s|--ssidonly eircomstring] [-d]")
+    parser = optparse.OptionParser(usage=("Usage: Eircog.py [-s|--ssidonly "
+                                          "eircomstring] [-d] [-4] [-i INTERFACE]"))
 
     parser.add_option("-s", "--ssidonly", action="store", type="string",
                      dest="ssidonly", help=("Specifies a manual SSID, no scanning "
