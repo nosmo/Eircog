@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
+import hashlib
 import optparse
 import os
 import re
-import sha
 import subprocess
 import sys
 import time
@@ -72,11 +72,6 @@ def GetAPs(numkeys,ssid=None):
                 else:
                     # Some people seem to be in the odd habit of joining the numbers
                     results.append([line[0]])
-            #else: 
-            #    manufacheck = CheckManufacturer(line[1])
-            #    if manufacheck:
-            #        print SerialfromMAC(line[1], manufacheck)
-            #Testing:
             else:
                 manufacheck = CheckManufacturer(line[2])
                 if manufacheck:
@@ -173,7 +168,6 @@ def SerialNumber(ssidoct):
     fseg = (ssidoct[0] & 0xffffffff) >> (32 - 12)
     
     serialnumber = ((shiftseg | fseg) | mac_segment) + serial_start
-    print serialnumber
     return serialnumber
 
 def SerialString(serial):
@@ -235,7 +229,7 @@ def DoKeys(serial, ap, numkeys):
         if numkeys == 4:
             length = len(hendrix)
         for i in range(length):
-            shastr = sha.new(serialstr + hendrix[i])
+            shastr = hashlib.sha1(serialstr + hendrix[i])
             shahex += shastr.hexdigest()
             
         ind = 0
