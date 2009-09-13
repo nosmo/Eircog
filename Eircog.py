@@ -65,7 +65,8 @@ def GetAPs(numkeys,ssid=None):
             print "|\t%s" % line
             line = line.split(" ")
 
-            if line[0].startswith("eircom"):
+            #len(ssid[0]) is to stop detection of "eircom" SSIDs while still being lazy and not using re
+            if line[0].startswith("eircom") and len(ssid[0]) >= 6:
                 line[0] = line[0].strip("eircom")
                 if re.compile("\d{4}").match(line[1]):
                     results.append([line[0], line[1]])
@@ -90,7 +91,7 @@ def GetAPs(numkeys,ssid=None):
             if line.find("ESSID:") != -1:
                 ssid = line.split("\"")[1]
                 ssid = ssid.split(" ")
-                if ssid[0].startswith("eircom"):
+                if ssid[0].startswith("eircom") and len(ssid[0]) >= 6:
                     ssid[0] = ssid[0].strip("eircom")
                     results.append(ssid)
 
@@ -99,7 +100,7 @@ def GetAPs(numkeys,ssid=None):
         single = []
 
         for i in ssid.split(" "):
-            if i.startswith("eircom"):
+            if i.startswith("eircom") and len(ssid[0]) >= 6:
                     i = i.strip("eircom")
             single.append(i)
         results.append(single)
