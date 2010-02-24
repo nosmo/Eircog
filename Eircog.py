@@ -66,7 +66,7 @@ def GetAPs(numkeys,ssid=None):
             line = line.split(" ")
 
             #len(ssid[0]) is to stop detection of "eircom" SSIDs while still being lazy and not using re
-            if line[0].startswith("eircom") and len(ssid[0]) >= 6:
+            if line[0].startswith("eircom"):
                 line[0] = line[0].strip("eircom")
                 if re.compile("\d{4}").match(line[1]):
                     results.append([line[0], line[1]])
@@ -74,11 +74,14 @@ def GetAPs(numkeys,ssid=None):
                     # Some people seem to be in the odd habit of joining the numbers
                     results.append([line[0]])
             else:
-                manufacheck = CheckManufacturer(line[2])
-                if manufacheck:
-                    print "!:"
-                    macserial = SerialfromMAC(line[2], manufacheck)
-                    DoKeys(macserial, [line[0], line[1]], numkeys)
+                try:
+                    manufacheck = CheckManufacturer(line[2])
+                    if manufacheck:
+                        print "!:"
+                        macserial = SerialfromMAC(line[2], manufacheck)
+                        DoKeys(macserial, [line[0], line[1]], numkeys)
+                        continue
+                except:
                     continue
 
     elif sys.platform == "linux2":
@@ -205,9 +208,11 @@ def DoAll(numkeys):
     octalbits = []
 
     for ap in access_points:
-
+        
         octconv = []
         for chunk in ap:
+            if chunk.startswith("eircom"):
+                chunk = chunk[6:]
             octconv.append(ParseOct(chunk))
 
         octalbits.append(octconv)
@@ -235,7 +240,7 @@ def DoKeys(serial, ap, numkeys):
             
         ind = 0
         
-        print "eircom%s %s:" % (ap[0], ap[1])            
+        print "%s %s:" % (ap[0], ap[1])            
         while (ind < numkeys*26):
             print "\t\t%s" % shahex[ind:ind+26]
             ind += 26
