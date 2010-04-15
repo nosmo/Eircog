@@ -86,8 +86,12 @@ def GetAPs(numkeys,ssid=None):
 
     elif sys.platform == "linux2":
 
-        scanproc = subprocess.Popen(("/sbin/iwlist %s scanning" % optparse.options.interface),
+        try:
+            scanproc = subprocess.Popen(("/sbin/iwlist %s scanning" % optparse.options.interface),
                                     shell = True, stdout = subprocess.PIPE)
+        except OSError:
+            sys.stderr.write("Couldn't find iwlist - is it installed?\n If so, you might need to change the path inside the script\n")
+            sys.exit(1)
         output = scanproc.communicate()[0].split("\n")
     
         for line in output:
