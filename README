@@ -22,6 +22,12 @@ Command-line arguments:
 -4: Generate 4 keys instead of the standard 1. 
 
 ----------------------
+TODO
+----------------------
+
+Add an option for key injection without joining, to save the user copy and pasting and to allow one scan of an area to potentially provide access to all seen APs. This might be doable with OS X's `security` command, although it doesn't seem to give access to the part of the keychian that looks after "Airport" entries. I'm not sure about how this storage could be done in Linux, assumedly files for Network Manager or equivalent commands could be altered.
+
+----------------------
 Addendum
 ----------------------
 
