@@ -10,9 +10,7 @@ import time
 
 """Eircom default WEP key autogenerator for Mac OS X and Linux iwtools.
 
-I have subdivided this code too much.
-
-Heavily based on http://h1.ripway.com/kevindevine/wep_key.html
+Eircom key generation Heavily based on http://h1.ripway.com/kevindevine/wep_key.html
 All credit for the key generation goes to Kevin Devine
 
 """
@@ -41,7 +39,7 @@ def GetAPs(numkeys,ssid=None):
     """
 
     results = []
-    
+
     if sys.platform == "darwin":
         scanproc = subprocess.Popen(("/System/Library/PrivateFrameworks/Apple80211."
                                      "framework/Versions/Current/Resources/airport "
@@ -90,10 +88,11 @@ def GetAPs(numkeys,ssid=None):
             scanproc = subprocess.Popen(("/sbin/iwlist %s scanning" % optparse.options.interface),
                                     shell = True, stdout = subprocess.PIPE)
         except OSError:
-            sys.stderr.write("Couldn't find iwlist - is it installed?\n If so, you might need to change the path inside the script\n")
+            sys.stderr.write(("Couldn't find iwlist - is it installed?\n If so, you might need "
+                             "to change the path inside the script\n"))
             sys.exit(1)
         output = scanproc.communicate()[0].split("\n")
-    
+
         for line in output:
             if line.find("ESSID:") != -1:
                 ssid = line.split("\"")[1]
@@ -113,7 +112,7 @@ def GetAPs(numkeys,ssid=None):
         results.append(single)
 
     return results
-    
+
 def CheckManufacturer(macaddress):
     if macaddress.startswith(NETOPIAPREFIX):
         print "Netopia router detected. Generating tentative keys"
@@ -122,7 +121,7 @@ def CheckManufacturer(macaddress):
         print "Netopia/Farallon router detected. Generating tentative keys"
         return 2
     return 0
-    
+
 def ParseOct(instr):
     """Parse the octal numbers from the AP SSIDs
 
@@ -133,12 +132,12 @@ def ParseOct(instr):
     Returns:
       octal: a true integer containing the base-10 representation of the octal
     """
-    
+
     octal = 0
     for digit in instr:
         octal  = (octal << 3) + int(digit)
     return octal
-    
+
 def SerialfromMAC(macaddress, company):
     #We don't need no stinking 2.6 transpose(None,":")
     # -8: in order to get the last 8 characters (the last 6 digits)
@@ -174,7 +173,7 @@ def SerialNumber(ssidoct):
     serial_start = 0x01000000
 
     fseg = (ssidoct[0] & 0xffffffff) >> (32 - 12)
-    
+
     serialnumber = ((shiftseg | fseg) | mac_segment) + serial_start
     return serialnumber
 
@@ -187,7 +186,7 @@ def SerialString(serial):
     Returns:
       serialstr: the string of the serial number of the AP
     """
-    
+
     serialno = str(serial)
     serialstr = ""
     for number in serialno:
@@ -196,13 +195,13 @@ def SerialString(serial):
 
 def DoAll(numkeys):
     """Do everything, really.
-    
+
      Call all of the relevant functions in order to get the serial key, then
     do the SHA-related hackery to get the actual key(s?).
-    
+
     Args:
       numkeys: the number of keys to generate - 1 or 4.
-      
+
     Returns:
       owt.
     """
@@ -212,7 +211,7 @@ def DoAll(numkeys):
     octalbits = []
 
     for ap in access_points:
-        
+
         octconv = []
         for chunk in ap:
             if chunk.startswith("eircom"):
@@ -221,9 +220,9 @@ def DoAll(numkeys):
 
         octalbits.append(octconv)
         serial = SerialNumber(octconv)
-        
+
         keymass = ""
-        
+
         DoKeys(serial, ap, numkeys)
 
 def DoKeys(serial, ap, numkeys):
@@ -233,7 +232,7 @@ def DoKeys(serial, ap, numkeys):
     else:
 
         serialstr = SerialString(serial)
-        shahex = "" 
+        shahex = ""
 
         length = 1
         if numkeys == 4:
@@ -241,10 +240,10 @@ def DoKeys(serial, ap, numkeys):
         for i in range(length):
             shastr = hashlib.sha1(serialstr + hendrix[i])
             shahex += shastr.hexdigest()
-            
+
         ind = 0
-        
-        print "%s %s:" % (ap[0], ap[1])            
+
+        print "%s %s:" % (ap[0], ap[1])
         while (ind < numkeys*26):
             print "\t\t%s" % shahex[ind:ind+26]
             ind += 26
@@ -259,10 +258,10 @@ def main():
                                             " spaces!"))
     parser.add_option("-i", "--interface", action="store", type="string",
                      dest="interface", help="The interface to scan with.")
-                                            
+
     parser.add_option("-d", "--daemon", action="store_true", default=False,
                       dest="daemon", help="Run constantly.")
-    parser.add_option("-4", action="store_true", default=False, dest="allkeys", 
+    parser.add_option("-4", action="store_true", default=False, dest="allkeys",
                       help="Generate all four keys instead of just one.")
 
     (optparse.options, optparse.args) = parser.parse_args()
@@ -272,9 +271,9 @@ def main():
         sys.platform = "ssidonly"
     elif optparse.options.daemon:
         daemon = True
-        
+
     numkeys = 1
-    
+
     if optparse.options.allkeys:
         numkeys = 4
     if sys.platform == "linux" and not(optparse.options.interface):
@@ -287,7 +286,7 @@ def main():
             os.system("/usr/bin/clear")
             DoAll(numkeys)
             time.sleep(SLEEPINTERVAL)
-            
+
     else:
         DoAll(numkeys)
 
