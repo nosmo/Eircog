@@ -17,9 +17,13 @@ Command-line arguments:
 -------
 
 ```--help```: show help information
+
 ```--s=SSIDSTRING``` or ```--ssidonly=SSIDSTRING```: return the key(s) for a given string and immediately exit.
+
 ```--interface=INTERFACE``` or ```-i=INTERFACE```: Specify the interface to scan with. This is MANDATORY in Linux. Has no effect under OS X.
+
 ```-d``` or ```--daemon```: Run the script constantly, scanning every SLEEPINTERVAL (by default this is 5 seconds). The term "daemon" is used because I was a moron. To be fixed.
+
 ```-4```: Generate 4 keys instead of the standard 1 when using the Eircom exploit.
 
 TODO
