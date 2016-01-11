@@ -8,7 +8,10 @@ import subprocess
 import sys
 import time
 
-"""Eircom default WEP key autogenerator for Mac OS X and Linux iwtools.
+from upc import UPC_REGEX, gen_upc_keys
+import eircom
+
+"""Default wifi key autogenerator for Mac OS X and Linux iwtools.
 
 Eircom key generation Heavily based on http://h1.ripway.com/kevindevine/wep_key.html
 All credit for the key generation goes to Kevin Devine
@@ -28,11 +31,14 @@ SLEEPINTERVAL = 5
 NETOPIAPREFIX = "00:0f:cc"
 FARALLONPREFIX = "00:00:c5"
 
-def GetAPs(numkeys,ssid=None):
-    """Parse eircom???? ???? SSIDs.
+
+
+def get_aps(numkeys, ssid=None, do_upc=False):
+    """Scan and return interesting SSIDs, defaulting to Eircom
 
     Args:
      ssid: an optional supplied ssid for getting the key from the command line
+     do_upc: whether to harvest UPC keys
 
     Returns:
       results: a list of two entry lists containing the octal for the access points
@@ -64,6 +70,7 @@ def GetAPs(numkeys,ssid=None):
             line = line.split(" ")
 
             #len(ssid[0]) is to stop detection of "eircom" SSIDs while still being lazy and not using re
+            # TODO fix this whole section, this splitting stuff is absolute bullshit
             if line[0].startswith("eircom"):
                 line[0] = line[0].strip("eircom")
                 if re.compile("\d{4}").match(line[1]):
@@ -71,13 +78,17 @@ def GetAPs(numkeys,ssid=None):
                 else:
                     # Some people seem to be in the odd habit of joining the numbers
                     results.append([line[0]])
+            elif line[0].startswith("UPC") and len(line[0]) == 10:
+                if do_upc:
+                    results.append([line[0]])
+
             else:
                 try:
-                    manufacheck = CheckManufacturer(line[2])
+                    manufacheck = eircom.check_manufacturer(line[2])
                     if manufacheck:
                         print "!:"
-                        macserial = SerialfromMAC(line[2], manufacheck)
-                        DoKeys(macserial, [line[0], line[1]], numkeys)
+                        macserial = serial_from_mac(line[2], manufacheck)
+                        do_eircom_keys(macserial, [line[0], line[1]], numkeys)
                         continue
                 except:
                     continue
@@ -100,153 +111,67 @@ def GetAPs(numkeys,ssid=None):
                 if ssid[0].startswith("eircom") and len(ssid[0]) >= 6:
                     ssid[0] = ssid[0].strip("eircom")
                     results.append(ssid)
+                elif ssid[0].startswith("UPC"):
+                    results.append(ssid)
 
     elif sys.platform == "ssidonly":
 
         single = []
 
         for i in ssid.split(" "):
+            #TODO UPC support
             if i.startswith("eircom") and len(ssid[0]) >= 6:
-                    i = i.strip("eircom")
+                i = i.strip("eircom")
             single.append(i)
         results.append(single)
 
     return results
 
-def CheckManufacturer(macaddress):
-    if macaddress.startswith(NETOPIAPREFIX):
-        print "Netopia router detected. Generating tentative keys"
-        return 1
-    elif macaddress.startswith(FARALLONPREFIX):
-        print "Netopia/Farallon router detected. Generating tentative keys"
-        return 2
-    return 0
 
-def ParseOct(instr):
-    """Parse the octal numbers from the AP SSIDs
 
-    Args:
-      instr: a 4 digit string to be converted to an int representation of the
-      octal
-
-    Returns:
-      octal: a true integer containing the base-10 representation of the octal
-    """
-
-    octal = 0
-    for digit in instr:
-        octal  = (octal << 3) + int(digit)
-    return octal
-
-def SerialfromMAC(macaddress, company):
-    #We don't need no stinking 2.6 transpose(None,":")
-    # -8: in order to get the last 8 characters (the last 6 digits)
-    macaddress = filter(lambda a: a!=":", macaddress[-8:])
-    serial = 0
-    for i in macaddress:
-        serial = serial << 4
-        serial += int(i, 16)
-    if company == 1:
-        serial += 0x01000000
-    return serial
-
-def SerialNumber(ssidoct):
-    """Get the serial number form the supplied octal.
-
-    Args:
-      ssidoct: the base-10 int obtained from the octal
-
-    Returns:
-      serialnumber: the serial number of the access point
-    """
-
-    if len(ssidoct) != 2:
-        return None
-
-    # XOR the second segment with 0x0FCC (The Netopia MAC prefix)
-    mac_segment = ssidoct[1] ^ 0x0FCC
-
-    # Shift the first segment over by 12
-    shiftseg = ssidoct[0] << 12
-
-    # 0x01000000 because all Netopia serials start with it
-    serial_start = 0x01000000
-
-    fseg = (ssidoct[0] & 0xffffffff) >> (32 - 12)
-
-    serialnumber = ((shiftseg | fseg) | mac_segment) + serial_start
-    return serialnumber
-
-def SerialString(serial):
-    """Return the 'OneTwoThree' string of the serial number
-
-    Args:
-      serial: the serial number of the access point
-
-    Returns:
-      serialstr: the string of the serial number of the AP
-    """
-
-    serialno = str(serial)
-    serialstr = ""
-    for number in serialno:
-        serialstr += inttoword(number)
-    return serialstr
-
-def DoAll(numkeys):
+def do_all(numkeys, do_upc):
     """Do everything, really.
 
      Call all of the relevant functions in order to get the serial key, then
-    do the SHA-related hackery to get the actual key(s?).
+    do the SHA-related hackery to get the actual key(s).
 
     Args:
       numkeys: the number of keys to generate - 1 or 4.
+      do_upc: whether or not to generate keys for UPC{d}\7 APs
 
     Returns:
       owt.
     """
 
-    access_points = GetAPs(numkeys, optparse.options.ssidonly)
+    print "Scan in progress"
+    access_points = get_aps(numkeys, optparse.options.ssidonly, do_upc=do_upc)
 
     octalbits = []
 
     for ap in access_points:
+        if do_upc and ap[0].startswith("UPC"):
+            upc_match = UPC_REGEX.match(ap[0])
+            if upc_match:
 
-        octconv = []
-        for chunk in ap:
-            if chunk.startswith("eircom"):
-                chunk = chunk[6:]
-            octconv.append(ParseOct(chunk))
+                upc_digits = int(upc_match.groups()[0])
+                serial, potential_phrases = gen_upc_keys(upc_digits)
+                print "%s" % ap[0]
+                for potential_phrase in potential_phrases:
+                    print "\t\t%s" % potential_phrase
 
-        octalbits.append(octconv)
-        serial = SerialNumber(octconv)
+        else:
+            octconv = []
+            for chunk in ap:
+                if chunk.startswith("eircom"):
+                    chunk = chunk[6:]
+                octconv.append(int(chunk, 8))
 
-        keymass = ""
+            octalbits.append(octconv)
+            serial = serial_number(octconv)
 
-        DoKeys(serial, ap, numkeys)
+            keymass = ""
 
-def DoKeys(serial, ap, numkeys):
-
-    if not(serial):
-        return
-    else:
-
-        serialstr = SerialString(serial)
-        shahex = ""
-
-        length = 1
-        if numkeys == 4:
-            length = len(hendrix)
-        for i in range(length):
-            shastr = hashlib.sha1(serialstr + hendrix[i])
-            shahex += shastr.hexdigest()
-
-        ind = 0
-
-        print "%s %s:" % (ap[0], ap[1])
-        while (ind < numkeys*26):
-            print "\t\t%s" % shahex[ind:ind+26]
-            ind += 26
+            gen_eircom_keys(serial, ap, numkeys)
 
 def main():
     parser = optparse.OptionParser(usage=("Usage: Eircog.py [-s|--ssidonly "
@@ -261,6 +186,9 @@ def main():
 
     parser.add_option("-d", "--daemon", action="store_true", default=False,
                       dest="daemon", help="Run constantly.")
+    parser.add_option("-U", "--upc", action="store_true", default=False,
+                      dest="do_upc",
+                      help="Generate suggestions for UPC SSIDs. Takes time.")
     parser.add_option("-4", action="store_true", default=False, dest="allkeys",
                       help="Generate all four keys instead of just one.")
 
@@ -284,11 +212,11 @@ def main():
         os.system("/usr/bin/clear")
         while True:
             os.system("/usr/bin/clear")
-            DoAll(numkeys)
+            do_all(numkey, optparse.options.do_upc)
             time.sleep(SLEEPINTERVAL)
 
     else:
-        DoAll(numkeys)
+        do_all(numkeys, optparse.options.do_upc)
 
 
 if __name__ == "__main__":
