@@ -16,6 +16,8 @@ As per https://haxx.in/LICENSE, including bl4sty's notice.
 The code below is a slightly more Pythonic rewrite of bl4sty's work
 but the logic is mostly identical.
 
+TODO: try and speed this up - key generation takes *minutes*
+
 '''
 
 import re
@@ -32,10 +34,6 @@ MAGIC_5GHZ = -7500000
 MAGIC0 = 0xb21642c9
 MAGIC1 = 0x68de3af
 MAGIC2 = 0x6b5fca6b
-
-#MAGIC0 = -1307163959
-MAGIC1 = 109962159
-MAGIC2 = 1801439851
 
 MAX0 = 9
 MAX1 = 99

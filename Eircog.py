@@ -13,8 +13,11 @@ import eircom
 
 """Default wifi key autogenerator for Mac OS X and Linux iwtools.
 
-Eircom key generation Heavily based on http://h1.ripway.com/kevindevine/wep_key.html
-All credit for the key generation goes to Kevin Devine
+Eircom key generation entirely based upon the work of Kevin Devine. See upc.py for more details.
+UPC key generation entirely based upon the work of bl4sty. See upc.py for more details.
+
+Looking at this code 5 years later really nails home how much a giant
+piece of shit it is. Rewrites coming.
 
 """
 
@@ -140,7 +143,7 @@ def do_all(numkeys, do_upc):
       do_upc: whether or not to generate keys for UPC{d}\7 APs
 
     Returns:
-      owt.
+      None
     """
 
     print "Scan in progress"
@@ -154,10 +157,10 @@ def do_all(numkeys, do_upc):
             if upc_match:
 
                 upc_digits = int(upc_match.groups()[0])
+                print "Generating keys for %s" % ap[0]
                 serial, potential_phrases = gen_upc_keys(upc_digits)
-                print "%s" % ap[0]
                 for potential_phrase in potential_phrases:
-                    print "\t\t%s" % potential_phrase
+                    print "\t- %s" % potential_phrase
 
         else:
             octconv = []
@@ -174,8 +177,9 @@ def do_all(numkeys, do_upc):
             gen_eircom_keys(serial, ap, numkeys)
 
 def main():
+    #TODO  replace optparse with argparse
     parser = optparse.OptionParser(usage=("Usage: Eircog.py [-s|--ssidonly "
-                                          "eircomstring] [-d] [-4] [-i INTERFACE]"))
+                                          "ssidstring] [-d] [-4] [-i INTERFACE] [-U]"))
 
     parser.add_option("-s", "--ssidonly", action="store", type="string",
                      dest="ssidonly", help=("Specifies a manual SSID, no scanning "
@@ -184,21 +188,21 @@ def main():
     parser.add_option("-i", "--interface", action="store", type="string",
                      dest="interface", help="The interface to scan with.")
 
-    parser.add_option("-d", "--daemon", action="store_true", default=False,
-                      dest="daemon", help="Run constantly.")
+    parser.add_option("-C", "--continuous", action="store_true", default=False,
+                      dest="continuous", help="Scan and generate keys constantly.")
     parser.add_option("-U", "--upc", action="store_true", default=False,
                       dest="do_upc",
                       help="Generate suggestions for UPC SSIDs. Takes time.")
     parser.add_option("-4", action="store_true", default=False, dest="allkeys",
                       help="Generate all four keys instead of just one.")
+    parser.add_option("--force-upc", action="store_true", default=False, dest="force_upc",
+                      help="Force UPC key generation.")
 
     (optparse.options, optparse.args) = parser.parse_args()
 
-    daemon = False
     if optparse.options.ssidonly:
+        #TODO this is really stupid, don't do this what the absolute fuck
         sys.platform = "ssidonly"
-    elif optparse.options.daemon:
-        daemon = True
 
     numkeys = 1
 
@@ -208,7 +212,13 @@ def main():
         sys.stderr.write("Interface not specified!\n")
         sys.exit(1)
 
-    if daemon:
+    if optparse.options.continuous:
+        if optparse.options.do_upc and not optparse.option.force_upc:
+            sys.stderr.write(("UPC keys take so long to generate that there's no"
+                              " point combining it with continuous mode. If you "
+                              "*really* want to do this, use the "
+                              "--force-upc argument."))
+            sys.exit(1)
         os.system("/usr/bin/clear")
         while True:
             os.system("/usr/bin/clear")

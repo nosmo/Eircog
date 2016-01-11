@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+'''Predictable WEP key generation for Eircom routers.
+
+Eircom key generation Heavily based on http://h1.ripway.com/kevindevine/wep_key.html
+All credit for the Eircom key generation goes to Kevin Devine
+
+'''
+
 import hashlib
 
 
