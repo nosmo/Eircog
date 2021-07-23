@@ -31,8 +31,6 @@ hendrix = ["Although your world wonders me, ",
            "So to you I shall put an end and"]
 
 SLEEPINTERVAL = 5
-NETOPIAPREFIX = "00:0f:cc"
-FARALLONPREFIX = "00:00:c5"
 
 
 
@@ -91,9 +89,10 @@ def get_aps(numkeys, ssid=None, do_upc=False):
                     if manufacheck:
                         print "!:"
                         macserial = serial_from_mac(line[2], manufacheck)
-                        do_eircom_keys(macserial, [line[0], line[1]], numkeys)
+                        eircom.gen_eircom_keys(macserial, [line[0], line[1]], numkeys)
                         continue
-                except:
+                except Exception as e:
+                    print("Hit exception {} while checking for {}".format(str(e), line))
                     continue
 
     elif sys.platform == "linux2":
@@ -148,19 +147,17 @@ def do_all(numkeys, do_upc):
 
     print "Scan in progress"
     access_points = get_aps(numkeys, optparse.options.ssidonly, do_upc=do_upc)
+    print("Got {} APs".format(len(access_points)))
 
     octalbits = []
+    upc_list = []
 
     for ap in access_points:
         if do_upc and ap[0].startswith("UPC"):
             upc_match = UPC_REGEX.match(ap[0])
             if upc_match:
-
                 upc_digits = int(upc_match.groups()[0])
-                print "Generating keys for %s" % ap[0]
-                serial, potential_phrases = gen_upc_keys(upc_digits)
-                for potential_phrase in potential_phrases:
-                    print "\t- %s" % potential_phrase
+                upc_list.append(upc_digits)
 
         else:
             octconv = []
@@ -175,6 +172,16 @@ def do_all(numkeys, do_upc):
             keymass = ""
 
             gen_eircom_keys(serial, ap, numkeys)
+
+    if upc_list:
+        print "Generating UPC keys, please wait..."
+        upc_results = gen_upc_keys(*upc_list)
+
+    for upc_int in upc_list:
+        print "UPC%d" % upc_int
+        potential_phrases = upc_results[upc_int]
+        for potential_phrase in potential_phrases:
+            print "\t- %s" % potential_phrase
 
 def main():
     #TODO  replace optparse with argparse

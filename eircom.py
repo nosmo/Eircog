@@ -9,6 +9,8 @@ All credit for the Eircom key generation goes to Kevin Devine
 
 import hashlib
 
+NETOPIAPREFIX = "00:0f:cc"
+FARALLONPREFIX = "00:00:c5"
 
 def check_manufacturer(macaddress):
     if macaddress.startswith(NETOPIAPREFIX):
@@ -76,7 +78,6 @@ def serial_string(serial):
 
 def gen_eircom_keys(serial, ap, numkeys):
     #TODO return data, don't print in this function
-
 
     if not(serial):
         return

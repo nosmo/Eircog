@@ -5,14 +5,14 @@ Eircog
 Introduction
 -------
 
-Eircog is a Python tool that is used to actively generate WEP keys for
+Eircog is a Python tool that is used to actively generate keys for
 nearby access points that are vulnerable to
 
 * the Netopia predictable WEP key generation issue discovered by Kevin
  Devine, most commonly found in the routers of a particularly large
  Irish telco.
 
-* [bl4sty](https://twitter.com/bl4sty)'s key generation method for UPC
+* [bl4sty](https://twitter.com/bl4sty)'s WPA key generation method for UPC
   routers in various countries.
 
 It uses system binaries to obtain the SSIDs of nearby access points

